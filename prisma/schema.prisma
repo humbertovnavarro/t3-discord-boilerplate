@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Necessary for Next auth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? // @db.Text
+  access_token      String? // @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? // @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+model Guild {
+  createdAt DateTime @default(now())
+  id String @id // external
+  channels Channel[]
+  messages DiscordMessage[]
+  members GuildMember[]
+}
+
+model Channel {
+  createdAt DateTime @default(now())
+  id String @id // external
+  guildID String
+  guild Guild @relation(fields: [guildID], references: [id], onDelete: Cascade)
+  messages DiscordMessage[]
+  tag ChannelTag[]
+  @@unique([guildID, id])
+}
+
+model ChannelTag {
+  id String @id // external
+  tag String
+  channelID String
+  channel Channel @relation(fields: [channelID], references: [id], onDelete: Cascade)
+}
+
+model GuildMember {
+  createdAt DateTime @default(now())
+  id String @id @default(uuid())
+  discordUserID String
+  discordUser DiscordUser @relation(fields: [discordUserID], references: [id], onDelete: Cascade)
+  guildID String
+  guild Guild @relation(fields: [guildID], references: [id])
+  @@unique([discordUserID, guildID])
+}
+
+model DiscordUser {
+  createdAt DateTime @default(now())
+  id String @id // external
+  members GuildMember[]
+}
+
+model DiscordMessage {
+  createdAt DateTime @default(now())
+  id String @id // external
+  content String
+  channelID String
+  guildID String
+  channel Channel  @relation(fields: [channelID], references: [id], onDelete: Cascade)
+  guild Guild @relation(fields: [guildID], references: [id], onDelete: Cascade)
+}
+
+model Track {
+  createdAt DateTime @default(now())
+  url String @id @unique // external
+  origin String
+  views BigInt
+  description String?
+  name String
+  userTracks DiscordUserTrack[]
+}
+
+model DiscordUserTrack {
+  createdAt DateTime @default(now())
+  id String @id @default(uuid())
+  trackID String
+  plays Int
+  track Track @relation(fields: [trackID], references: [url], onDelete: Cascade)
+}
+
+model UserPermission {
+  id String @id @default(uuid())
+  permission String
+  scope String
+  userID String
+}
